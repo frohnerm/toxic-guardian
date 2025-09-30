@@ -1,101 +1,55 @@
-let ortReady = false;
-let session = null;
-let useML = false;
+// ml/inference.js (Ausschnitt – tauscht nur die Runtime-Initialisierung)
+// Wir laden ONNX Runtime WEB als ES-Module (*.mjs) und Transformers.js (ESM)
+
+let pipe = null;
 let threshold = 0.5;
-let keywords = [];
 
-function uint8ToString(u8) {
-  let s = "";
-  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
-  return s;
+async function importLocal(path) {
+  return import(chrome.runtime.getURL(path));
 }
 
-async function loadONNXRuntime() {
-  if (ortReady) return;
-  // Load local vendor build
-  const scriptUrl = chrome.runtime.getURL("vendor/ort.min.js");
-  await import(scriptUrl);
-  // Configure WASM path
-  // globalThis.ort is provided by the script above
-  globalThis.ort.env.wasm.wasmPaths = chrome.runtime.getURL("vendor/");
-  ortReady = true;
-}
+async function setupPipeline() {
+  if (pipe) return;
 
-async function loadModelFromStorage() {
-  const cfg = await chrome.storage.local.get(["modelBase64", "threshold", "keywordList"]);
-  threshold = typeof cfg.threshold === "number" ? cfg.threshold : 0.5;
-  keywords = Array.isArray(cfg.keywordList) ? cfg.keywordList : defaultKeywords;
+  // 1) ONNX Runtime als ES-Module laden
+  // Nimm die Datei, die du in vendor/ hast: ort.wasm.min.mjs oder ort.min.mjs
+  const ortModule = await importLocal("vendor/ort.wasm.min.mjs");
+  // Die ESM-Builds exportieren das Namespace-Objekt in 'default' ODER als Named-Export.
+  // Wir normalisieren das:
+  const ort = ortModule.default ?? ortModule;
 
-  if (cfg.modelBase64) {
-    await loadONNXRuntime();
-    const binary = Uint8Array.from(atob(cfg.modelBase64), c => c.charCodeAt(0));
-    session = await globalThis.ort.InferenceSession.create(binary, {
-      executionProviders: ["wasm"], // local CPU/WASM
-    });
-    useML = true;
-  } else {
-    useML = false;
-  }
-}
+  // WASM-Pfade setzen, damit ORT die .wasm im vendor/-Ordner findet
+  ort.env.wasm.wasmPaths = chrome.runtime.getURL("vendor/");
 
-// --- SIMPLE KEYWORD FALLBACK (works out of the box) ---
-const defaultKeywords = [
-  "idiot","stupid","dumb","hate you","kill yourself","retard","racist","sexist","trash","loser"
-];
+  // 2) Transformers.js laden (ESM)
+  const tjs = await importLocal("vendor/transformers.min.js");
+  const env = tjs.env ?? tjs.default?.env ?? tjs;
+  const pipeline = tjs.pipeline ?? tjs.default?.pipeline;
 
-function keywordScan(text) {
-  const lower = text.toLowerCase();
-  const hits = [];
-  for (const kw of keywords) {
-    const idx = lower.indexOf(kw.toLowerCase());
-    if (idx >= 0) {
-      hits.push({ start: idx, end: idx + kw.length, score: 1.0 });
-    }
-  }
-  return {
-    toxic: hits.length > 0,
-    spans: hits
-  };
-}
+  // Nur lokale Modelle zulassen und Model-Root setzen
+  env.allowRemoteModels = false;
+  env.localModelPath = chrome.runtime.getURL("models");
+  // Sicherheitshalber auch hier den WASM-Pfad setzen (Transformers greift auf ORT zurück)
+  env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL("vendor/");
 
-// --- ML PATH (ADAPT THIS TO YOUR MODEL) ---
-import { simpleFeatures } from "./preprocess.js";
+  // 3) Pipeline einmalig erstellen (Xenova/toxic-bert in models/toxic-bert/)
+  pipe = await pipeline("text-classification", "toxic-bert", {
+    quantized: true // nutzt model_quantized.onnx, wenn vorhanden
+  });
 
-async function mlScore(text) {
-  // This is a demo using a toy 2-feature model.
-  // Replace with your tokenizer & real ONNX inputs.
-  const feats = simpleFeatures(text); // Float32Array of shape [2]
-  const tensor = new globalThis.ort.Tensor("float32", feats, [1, feats.length]);
-
-  // You MUST adjust input/output names to your model's graph!
-  const feeds = { input: tensor };
-  const results = await session.run(feeds);
-  // Suppose the model outputs a single probability at "prob"
-  const score = results.prob?.data?.[0] ?? 0; // Change key to your output name
-  return score;
+  // 4) Threshold aus Storage lesen (optional)
+  const cfg = await chrome.storage.local.get(["threshold"]);
+  if (typeof cfg.threshold === "number") threshold = cfg.threshold;
 }
 
 export async function initIfNeeded() {
-  if (!session && !ortReady) {
-    await loadModelFromStorage();
-  }
+  if (!pipe) await setupPipeline();
 }
 
-// Main API used by content script
 export async function runDetector(text) {
-  if (!useML) {
-    return keywordScan(text);
-  }
-
-  try {
-    const score = await mlScore(text);
-    return {
-      toxic: score >= threshold,
-      score
-      // Optionally, generate spans using a separate span head or heuristic
-    };
-  } catch (e) {
-    console.warn("ML failed, falling back to keywords:", e);
-    return keywordScan(text);
-  }
+  await initIfNeeded();
+  const results = await pipe(text, { topk: 6, function_to_apply: "sigmoid" });
+  const toxic = results.some(r => r.score >= threshold);
+  const score = results.reduce((m, r) => Math.max(m, r.score), 0);
+  return { toxic, score, labels: results };
 }

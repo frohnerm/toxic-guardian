@@ -33,7 +33,7 @@
       "resources": [
         "ml/inference.js",
         "ml/preprocess.js",
-        "ml/model.onnx",
+        "models/toxic-bert/**",
         "vendor/*"
       ],
       "matches": ["<all_urls>"]
