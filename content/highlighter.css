@@ -1,0 +1,53 @@
+/* Verdeckter Text (unsichtbar, Platz bleibt erhalten) */
+.toxic-hidden {
+  filter: blur(8px);
+  opacity: 0.2;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+/* Nach dem Aufdecken */
+.toxic-revealed {
+  filter: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  user-select: text !important;
+}
+
+/* Klickbarer Banner (inline, passt in Fließtext) */
+.toxic-banner {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 4px;
+  font-size: 11px;
+  line-height: 1.6;
+  background: #8a1c1c;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: baseline;
+  user-select: none;
+}
+
+.toxic-banner:focus {
+  outline: 2px solid rgba(138, 28, 28, 0.5);
+  outline-offset: 2px;
+}
+
+/* Für komplette Textknoten, die ersetzt werden */
+.toxic-wrapper {
+  display: inline;
+}
+
+/* (Optional) dezente Markierung wenn bereits aufgedeckt wurde */
+.toxic-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 4px;
+  font-size: 10px;
+  line-height: 1.4;
+  background: #d2b48c;
+  color: #2b2b2b;
+  border-radius: 3px;
+}

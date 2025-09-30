@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.4",
+    "onnxruntime-node": "^1.23.0",
+    "onnxruntime-web": "^1.23.0"
+  }
+}
