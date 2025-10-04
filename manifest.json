@@ -7,7 +7,7 @@
     "default_title": "Toxic Guardian",
     "default_popup": "popup/popup.html"
   },
-  "permissions": ["storage", "contextMenus", "scripting", "activeTab"],
+  "permissions": ["storage", "contextMenus", "scripting", "activeTab", "webNavigation"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background/service_worker.js",
@@ -19,24 +19,16 @@
     "48": "icon48.png",
     "128": "icon128.png"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content/content.js"],
-      "css": ["content/highlighter.css"],
-      "run_at": "document_idle"
-    }
-  ],
-  "options_page": "options/options.html",
+  "content_scripts": [{
+  "matches": ["<all_urls>"],
+  "js": ["content/content.js"],
+  "css": ["content/highlighter.css"],
+  "run_at": "document_idle"
+}],  
   "web_accessible_resources": [
     {
-      "resources": [
-        "ml/inference.js",
-        "ml/preprocess.js",
-        "models/toxic-bert/**",
-        "vendor/*"
-      ],
-      "matches": ["<all_urls>"]
+      "resources": ["vendor/*", "models/**", "ml/**"],
+    "matches": ["<all_urls>"]
     }
   ]
 }

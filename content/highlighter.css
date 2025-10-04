@@ -18,17 +18,15 @@
 /* Klickbarer Banner (inline, passt in Fließtext) */
 .toxic-banner {
   display: inline-block;
-  padding: 2px 6px;
-  margin: 0 4px;
-  font-size: 11px;
-  line-height: 1.6;
-  background: #8a1c1c;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  vertical-align: baseline;
+  padding: 0 6px;
+  margin-right: 4px;
+  border-radius: 3px;
+  background: #ffd27d;
+  color: #222;
+  cursor: pointer;            /* keep hand cursor for banner */
   user-select: none;
 }
+
 
 .toxic-banner:focus {
   outline: 2px solid rgba(138, 28, 28, 0.5);
@@ -51,3 +49,54 @@
   color: #2b2b2b;
   border-radius: 3px;
 }
+/* Make wrapper a visible box so outlines/bg are noticeable */
+.toxic-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+/* Hidden text state (your existing styles can stay) */
+.toxic-hidden { filter: blur(4px); transition: filter 0.2s ease; }
+.toxic-revealed { filter: none; }
+
+/* Banner/button */
+.toxic-banner {
+  display: inline-block;
+  padding: 0 6px;
+  margin-right: 4px;
+  border-radius: 3px;
+  background: #ffd27d;
+  color: #222;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Little 'revealed' badge */
+.toxic-badge {
+  margin-left: 6px;
+  font-size: 12px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  color: #111;
+}
+
+/* Strong focus ring + soft yellow background when jumped-to */
+.tg-focus-wrap {
+  outline: 3px solid #f59e0b;                  /* amber-500 */
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, .25);
+  background: rgba(255, 245, 157, .35);        /* light yellow wash */
+  transition: outline-color .25s ease, background-color .25s ease;
+}
+
+/* Pulse animation for the banner to attract attention when not revealed */
+@keyframes tgPulse {
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(245, 158, 11, .5); }
+  50%  { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(245, 158, 11, .15); }
+  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.tg-pulse {
+  animation: tgPulse 700ms ease-in-out;
+}
+
