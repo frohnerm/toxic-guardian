@@ -1,2 +1,2 @@
-models/toxic-bert/onnx/model_quantized.onnx filter=lfs diff=lfs merge=lfs -text
 *.onnx filter=lfs diff=lfs merge=lfs -text
+models/toxic-bert/onnx/model_quantized.onnx filter=lfs diff=lfs merge=lfs -text
