@@ -1,4 +1,31 @@
-/* Verdeckter Text (unsichtbar, Platz bleibt erhalten) */
+/**
+ * Toxic Content Highlighter Styles
+ *
+ * Provides visual styling for cloaked toxic content:
+ * - Hidden text with blur effect
+ * - Clickable reveal banners
+ * - Focus indicators for keyboard navigation
+ * - Pulse animations for attention
+ */
+
+/* ===== Wrapper Container ===== */
+
+/**
+ * Container for toxic content.
+ * Uses inline-block to fit within text flow.
+ */
+.toxic-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+/* ===== Hidden Content ===== */
+
+/**
+ * Hidden toxic text - blurred and semi-transparent.
+ * Space is preserved in layout.
+ */
 .toxic-hidden {
   filter: blur(8px);
   opacity: 0.2;
@@ -7,7 +34,9 @@
   transition: filter 0.2s ease, opacity 0.2s ease;
 }
 
-/* Nach dem Aufdecken */
+/**
+ * Revealed state - content is visible and interactive.
+ */
 .toxic-revealed {
   filter: none !important;
   opacity: 1 !important;
@@ -15,52 +44,12 @@
   user-select: text !important;
 }
 
-/* Klickbarer Banner (inline, passt in Fließtext) */
-.toxic-banner {
-  display: inline-block;
-  padding: 0 6px;
-  margin-right: 4px;
-  border-radius: 3px;
-  background: #ffd27d;
-  color: #222;
-  cursor: pointer;            /* keep hand cursor for banner */
-  user-select: none;
-}
+/* ===== Reveal Banner (Button) ===== */
 
-
-.toxic-banner:focus {
-  outline: 2px solid rgba(138, 28, 28, 0.5);
-  outline-offset: 2px;
-}
-
-/* Für komplette Textknoten, die ersetzt werden */
-.toxic-wrapper {
-  display: inline;
-}
-
-/* (Optional) dezente Markierung wenn bereits aufgedeckt wurde */
-.toxic-badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 4px;
-  font-size: 10px;
-  line-height: 1.4;
-  background: #d2b48c;
-  color: #2b2b2b;
-  border-radius: 3px;
-}
-/* Make wrapper a visible box so outlines/bg are noticeable */
-.toxic-wrapper {
-  position: relative;
-  display: inline-block;
-  border-radius: 4px;
-}
-
-/* Hidden text state (your existing styles can stay) */
-.toxic-hidden { filter: blur(4px); transition: filter 0.2s ease; }
-.toxic-revealed { filter: none; }
-
-/* Banner/button */
+/**
+ * Clickable banner that reveals hidden content.
+ * Inline-block to fit within text flow.
+ */
 .toxic-banner {
   display: inline-block;
   padding: 0 6px;
@@ -72,17 +61,36 @@
   user-select: none;
 }
 
-/* Little 'revealed' badge */
-.toxic-badge {
-  margin-left: 6px;
-  font-size: 12px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: #e5e7eb;
-  color: #111;
+/**
+ * Focus indicator for keyboard navigation.
+ */
+.toxic-banner:focus {
+  outline: 2px solid rgba(138, 28, 28, 0.5);
+  outline-offset: 2px;
 }
 
-/* Strong focus ring + soft yellow background when jumped-to */
+/* ===== Revealed Badge ===== */
+
+/**
+ * Small badge shown after content is revealed.
+ */
+.toxic-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 4px;
+  font-size: 10px;
+  line-height: 1.4;
+  background: #e5e7eb;
+  color: #111;
+  border-radius: 3px;
+}
+
+/* ===== Navigation Highlight ===== */
+
+/**
+ * Strong visual emphasis when navigating to a toxic item.
+ * Combines outline, shadow, and background highlight.
+ */
 .tg-focus-wrap {
   outline: 3px solid #f59e0b;                  /* amber-500 */
   box-shadow: 0 0 0 3px rgba(245, 158, 11, .25);
@@ -90,13 +98,18 @@
   transition: outline-color .25s ease, background-color .25s ease;
 }
 
-/* Pulse animation for the banner to attract attention when not revealed */
+/* ===== Pulse Animation ===== */
+
+/**
+ * Pulse animation for banner to attract attention.
+ * Used when navigating to unrevealed content.
+ */
 @keyframes tgPulse {
   0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(245, 158, 11, .5); }
   50%  { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(245, 158, 11, .15); }
   100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
 }
+
 .tg-pulse {
   animation: tgPulse 700ms ease-in-out;
 }
-

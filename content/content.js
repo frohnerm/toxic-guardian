@@ -1,5 +1,15 @@
-// content/content.js — popup/background-triggered scan with robust progress & batched inference
-// All logic runs locally. This file expects ml/inference.js to be listed under web_accessible_resources.
+/**
+ * Content Script - Toxicity Scanner
+ *
+ * Scans page DOM for toxic content using local ML inference:
+ * - Triggered by background service worker or manual actions
+ * - Walks DOM to collect visible text nodes
+ * - Runs batched ML inference for classification
+ * - Cloaks toxic content behind reveal banners
+ * - Sends real-time progress updates to background
+ *
+ * All logic runs locally. Requires ml/inference.js in web_accessible_resources.
+ */
 
 // ---------------------------------------------------------------
 // 0) Small utilities (DOM traversal, ML loader, cloaking UI)
@@ -7,8 +17,15 @@
 
 /**
  * Walk visible text nodes in the document body.
- * - Skips nodes inside our own processed wrappers.
- * - Skips hidden/irrelevant elements (script/style/iframes/svg etc.).
+ *
+ * Filters:
+ * - Skips nodes inside processed wrappers (data-tg-processed)
+ * - Skips hidden/invisible elements
+ * - Skips non-content elements (script/style/iframe/svg etc.)
+ *
+ * @generator
+ * @param {Node} [root=document.body] - Starting node for traversal
+ * @yields {Text} Visible text nodes
  */
 function* walkTextNodes(root = document.body) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -41,7 +58,9 @@ function* walkTextNodes(root = document.body) {
 }
 
 /**
- * Dynamically import the inference module (must be web_accessible).
+ * Dynamically import the inference module.
+ *
+ * @returns {Promise<Module>} Inference module with runDetectorBatch and initIfNeeded
  */
 async function getInference() {
   const url = chrome.runtime.getURL("ml/inference.js");
@@ -49,7 +68,16 @@ async function getInference() {
 }
 
 /**
- * Create an accessible "reveal" banner that overlays hidden toxic text.
+ * Create an accessible "reveal" banner for hidden toxic content.
+ *
+ * Features:
+ * - Keyboard accessible (Tab + Enter/Space)
+ * - ARIA labels with confidence scores
+ * - Prevents event bubbling to parent links
+ *
+ * @param {Function} onReveal - Callback when user reveals content
+ * @param {object} [debugInfo] - Classification results with labels and scores
+ * @returns {HTMLElement} Banner element
  */
 function createBanner(onReveal, debugInfo) {
   const banner = document.createElement("span");
@@ -65,13 +93,13 @@ function createBanner(onReveal, debugInfo) {
     banner.setAttribute("aria-label", t);
   }
 
-  // Einheitliche Reveal-Action
+  // Unified reveal action
   const trigger = () => {
     onReveal();
     banner.remove();
   };
 
-  // Maus/Touch/Pointer auf dem Banner: default & bubbling killen
+  // Prevent event bubbling to parent elements (especially links)
   const eat = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -81,7 +109,7 @@ function createBanner(onReveal, debugInfo) {
     banner.addEventListener(type, (e) => { eat(e); if (type === "click") trigger(); }, { capture: true });
   });
 
-  // Keyboard: Enter/Space → reveal ohne Scroll/Navi
+  // Keyboard: Enter/Space → reveal without scrolling/navigation
   banner.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -95,7 +123,15 @@ function createBanner(onReveal, debugInfo) {
 }
 
 /**
- * Replace a text node with a wrapper that hides its content behind a reveal banner.
+ * Replace a text node with a wrapper that hides content behind a reveal banner.
+ *
+ * Link Handling:
+ * - If node is inside an <a>, disable link clicks until content is revealed
+ * - Tracks banner count per link (multiple toxic texts in one link)
+ * - Re-enables link only when all banners in that link are revealed
+ *
+ * @param {Text} textNode - Text node to cloak
+ * @param {object} res - Classification result with labels and scores
  */
 function cloakWholeNode(textNode, res) {
   const wrapper = document.createElement("span");
@@ -106,28 +142,28 @@ function cloakWholeNode(textNode, res) {
   hidden.className = "toxic-hidden";
   hidden.textContent = textNode.nodeValue;
 
-  // Falls im <a>…</a>: Link so lange deaktivieren, wie mind. ein Banner im Link sichtbar ist.
+  // If inside <a>: disable link clicks while at least one banner is visible
   const anchor = textNode.parentElement?.closest?.("a");
   if (anchor) {
-    // Zähler für mehrere Banner im gleichen Link
+    // Track multiple banners in the same link
     const count = (parseInt(anchor.dataset.tgBlockCount || "0", 10) || 0) + 1;
     anchor.dataset.tgBlockCount = String(count);
     if (count === 1) {
-      // ursprünglichen Zustand merken und klicks unterbinden
+      // Save original state and prevent clicks
       anchor.dataset.tgPrevPE = anchor.style.pointerEvents || "";
       anchor.style.pointerEvents = "none";
     }
   }
 
   const banner = createBanner(() => {
-    // Reveal
+    // Reveal content
     hidden.classList.add("toxic-revealed");
     const badge = document.createElement("span");
     badge.className = "toxic-badge";
     badge.textContent = "revealed";
     wrapper.appendChild(badge);
 
-    // Link ggf. wieder aktivieren (nur wenn kein anderer Banner im selben <a> offen ist)
+    // Re-enable link if no other banners are left in the same <a>
     if (anchor) {
       const left = Math.max(0, (parseInt(anchor.dataset.tgBlockCount || "1", 10) || 1) - 1);
       anchor.dataset.tgBlockCount = String(left);
@@ -154,6 +190,7 @@ window.addEventListener("beforeunload", () => {
 
 /**
  * Scan lifecycle state.
+ * @type {{runId: number, aborted: boolean, isRunning: boolean}}
  */
 let TG_SCAN = {
   runId: 0,
@@ -161,6 +198,10 @@ let TG_SCAN = {
   isRunning: false
 };
 
+/**
+ * Tab ID obtained from background handshake.
+ * @type {number|null}
+ */
 let __TG_TAB_ID__ = null;
 
 // Identify our tabId to the Service Worker (used in progress updates)
@@ -169,28 +210,47 @@ chrome.runtime.sendMessage({ type: "CS_HELLO" }, (res) => {
 });
 
 /**
- * Send progress to the background for badge/popup updates.
+ * Send progress update to background for badge/popup updates.
+ *
+ * @param {object} p - Progress object with state, total, done, hits, etc.
  */
 function sendProgress(p) {
   chrome.runtime.sendMessage({ type: "SCAN_PROGRESS", tabId: __TG_TAB_ID__, ...p }).catch(() => { });
 }
 
 /**
- * Remove any previous cloaked wrappers (idempotent).
+ * Remove any previous cloaked wrappers from the DOM (idempotent).
  */
 function clearPreviousScan() {
   document.querySelectorAll(".toxic-wrapper").forEach((el) => el.replaceWith(...el.childNodes));
 }
 
 // ---------------------------------------------------------------
-/* 2) Main scan (triggered via RUN_SCAN)
- *
- *  - Traverses text nodes
- *  - Batches them for inference (significant speed-up)
- *  - Cloaks nodes classified as toxic
- *  - Streams progress back to the SW/popup
- */
+// 2) Main scan (triggered via RUN_SCAN message)
+//
+// Algorithm:
+//  - Traverses DOM text nodes
+//  - Batches them for ML inference (significant speed-up)
+//  - Cloaks nodes classified as toxic
+//  - Streams real-time progress back to background/popup
 // ---------------------------------------------------------------
+
+/**
+ * Main page scanning function.
+ *
+ * Process:
+ * 1. Checks if scan already running (prevents duplicates)
+ * 2. Increments run ID and clears previous results
+ * 3. Collects all visible text nodes via walkTextNodes()
+ * 4. Loads and initializes ML model
+ * 5. Processes nodes in batches (16 texts at a time)
+ * 6. Applies cloaking to toxic results
+ * 7. Sends progress updates throughout
+ * 8. Handles cancellation via TG_SCAN.aborted flag
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function scanPage() {
   if (TG_SCAN.isRunning) return;
   TG_SCAN.isRunning = true;
