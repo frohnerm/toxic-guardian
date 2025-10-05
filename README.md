@@ -11,7 +11,6 @@ A browser extension that scans web pages for toxic and harassing content using l
 - **SPA Support**: Detects and rescans content on single-page application route changes
 - **Zero Network Calls**: No external API dependencies, all models are bundled
 - **Privacy First**: No data leaves your browser, no tracking, no telemetry
-- **Accessible**: Keyboard navigation and ARIA labels for screen readers
 
 ## Installation
 
@@ -54,7 +53,6 @@ Click the extension icon to open the popup with controls:
 - **Run**: Manually trigger a scan of the current page
 - **Cancel**: Abort an in-progress scan
 - **Prev/Next**: Navigate between detected toxic content
-- Arrow keys (←/→) also work when the popup is open
 
 ### Revealing Content
 
@@ -185,10 +183,6 @@ Contributions are welcome! Please read the developer documentation before submit
 - Statistics and analytics dashboard
 - Custom blocklists/allowlists
 - Model updates and version management
-
-## License
-
-ISC
 
 ## Credits
 
