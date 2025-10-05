@@ -126,10 +126,6 @@ Once a scan is complete, you can jump between detected items:
 2. Use the "Prev" and "Next" buttons to jump between items
 3. Or use arrow keys (← and →) while the popup is open
 
-**Keyboard Shortcuts:** (when popup is open)
-- **Right Arrow (→)**: Next toxic item
-- **Left Arrow (←)**: Previous toxic item
-
 **Visual Feedback:**
 - The page automatically scrolls to the item
 - An orange highlight ring appears around the item
@@ -290,44 +286,6 @@ This is stored using Chrome's `storage.local` API and never leaves your device.
 
 ---
 
-### Nothing is Being Detected
-
-**Check:**
-1. Does the page have actual content? (Some pages are mostly images)
-2. Is JavaScript enabled in your browser?
-3. Try manually scanning: Click icon → "Run"
-4. Check the browser console for errors (F12 → Console)
-
----
-
-### Too Much Content is Flagged
-
-The detection might be too sensitive.
-
-**To adjust:** (Advanced - requires browser console)
-```javascript
-// Make detection less sensitive (0.0 = everything, 1.0 = nothing)
-chrome.storage.local.set({ threshold: 0.7 });
-```
-
-Then reload the extension.
-
----
-
-### Too Little Content is Flagged
-
-The detection might not be sensitive enough.
-
-**To adjust:** (Advanced)
-```javascript
-// Make detection more sensitive
-chrome.storage.local.set({ threshold: 0.3 });
-```
-
-Then reload the extension.
-
----
-
 ### Scans Take Forever
 
 **Possible causes:**
@@ -393,44 +351,6 @@ It's more sophisticated than simple keyword blocking.
 
 ---
 
-### Why is this extension free?
-
-Toxic Guardian is an open-source project. It's free because:
-- No servers to maintain (everything is local)
-- No data collection or advertising
-- Community-driven development
-- Passion project by the creator
-
----
-
-### How can I support the project?
-
-- Star the project on GitHub
-- Report bugs and issues
-- Suggest improvements
-- Share with friends who might benefit
-- Contribute code (see DEVELOPER.md)
-
----
-
-## Accessibility
-
-Toxic Guardian is designed to be accessible:
-
-### Screen Readers
-
-- All banners have ARIA labels
-- Role attributes for proper navigation
-- Keyboard support for all interactions
-
-### Keyboard Navigation
-
-- Tab to move between banners
-- Enter or Space to reveal content
-- Arrow keys to navigate between items (popup open)
-
----
-
 ## Getting Help
 
 ### Report an Issue
@@ -463,8 +383,8 @@ Have an idea for improvement?
 | Reveal toxic content | Click yellow banner |
 | Manual scan | Icon → "Run" |
 | Cancel scan | Icon → "Cancel" |
-| Next item | Icon → "Next" or → key |
-| Previous item | Icon → "Prev" or ← key |
+| Next item | Icon → "Next" |
+| Previous item | Icon → "Prev" |
 | Console scan | `window.tgScanPage()` |
 | Change threshold | `chrome.storage.local.set({ threshold: 0.7 })` |
 
